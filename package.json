@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "expo-clipboard": "^7.0.1"
+  }
+}
