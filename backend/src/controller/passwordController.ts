@@ -37,6 +37,15 @@ export const listarSenhas = async (userId: string, filtros?: { favorite?: boolea
 
 // ✅ Buscar senha por ID
 export const buscarSenhaPorId = async (userId: string, passwordId: string) => {
+    // Validar os parâmetros antes de fazer a consulta
+    if (!userId || !passwordId || passwordId === 'undefined' || passwordId === 'null') {
+        console.log('Parâmetros inválidos:', { userId, passwordId });
+        return {
+            success: false,
+            error: 'Parâmetros inválidos'
+        };
+    }
+
     try {
         const senha = await passwordRepository.findOne({
             where: {
@@ -46,11 +55,18 @@ export const buscarSenhaPorId = async (userId: string, passwordId: string) => {
         });
 
         if (!senha) {
+            console.log('Senha não encontrada:', { userId, passwordId });
             return {
                 success: false,
                 error: 'Senha não encontrada'
             };
         }
+
+        console.log('Senha encontrada com sucesso:', { 
+            userId, 
+            passwordId, 
+            name: senha.name 
+        });
 
         return {
             success: true,
@@ -195,18 +211,23 @@ export const atualizarSenha = async (
 
 export const verificarSenha = async (userId: string, password: string) => {
     try {
-        const userRepository = getRepository(Usuario);
         const user = await userRepository.findOne({ where: { usuarioID: userId } });
 
         if (!user) {
+            console.log('Usuário não encontrado:', userId);
             return {
                 success: false,
                 error: 'Usuário não encontrado.'
             };
         }
 
+        console.log('Verificando senha para usuário:', userId);
+        console.log('Senha fornecida:', password);
+        console.log('Senha armazenada:', user.senha);
+
         // Comparando a senha fornecida com a senha armazenada (criptografada)
         const isMatch = await bcrypt.compare(password, user.senha);
+        console.log('Resultado da comparação:', isMatch);
 
         if (!isMatch) {
             return {

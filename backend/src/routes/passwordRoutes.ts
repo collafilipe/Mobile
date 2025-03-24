@@ -44,6 +44,15 @@ router.get('/:userId', async (req: Request, res: Response) => {
 router.get('/:userId/:passwordId', async (req: Request, res: Response) => {
     const { userId, passwordId } = req.params;
 
+    // Validação de parâmetros
+    if (!userId || !passwordId || passwordId === 'undefined' || passwordId === 'null') {
+        return res.status(400).json({ 
+            success: false,
+            error: 'Parâmetros inválidos',
+            message: 'ID de usuário e senha são obrigatórios'
+        });
+    }
+
     try {
         const result = await buscarSenhaPorId(userId, passwordId);
 
@@ -53,6 +62,15 @@ router.get('/:userId/:passwordId', async (req: Request, res: Response) => {
 
         res.status(200).json(result);
     } catch (error: any) {
+        console.error('Erro ao buscar senha na rota:', error);
+        // Verificação específica para erro de UUID inválido
+        if (error.code === '22P02') {
+            return res.status(400).json({
+                success: false,
+                error: 'ID de senha inválido',
+                message: 'O formato do ID da senha é inválido'
+            });
+        }
         res.status(500).json({ error: 'Erro ao buscar senha', details: error.message });
     }
 });
@@ -60,20 +78,32 @@ router.get('/:userId/:passwordId', async (req: Request, res: Response) => {
 router.post('/verify-password', async (req: Request, res: Response) => {
     const { userId, password } = req.body;
 
+    console.log('Requisição de verificação de senha recebida:', { userId, password });
+
     if (!userId || !password) {
-        return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
+        console.log('Dados incompletos:', { userId, password });
+        return res.status(400).json({ 
+            success: false,
+            error: 'Usuário e senha são obrigatórios.' 
+        });
     }
 
     try {
         const result = await verificarSenha(userId, password);
+        console.log('Resultado da verificação:', result);
 
         if (!result.success) {
-            return res.status(401).json(result);  // Se falhar, retorna erro 401 (não autorizado)
+            return res.status(401).json(result);
         }
 
-        res.status(200).json(result);  // Se for bem-sucedido, retorna sucesso
+        res.status(200).json(result);
     } catch (error: any) {
-        res.status(500).json({ error: 'Erro ao verificar a senha', details: error.message });
+        console.error('Erro na rota de verificação:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Erro ao verificar a senha', 
+            details: error.message 
+        });
     }
 });
 

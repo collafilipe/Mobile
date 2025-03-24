@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,12 +19,16 @@ import axios from 'axios';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
 
+// IP constante para facilitar manutenção
+const API_URL = 'http://172.20.10.3:5000';
+
 type PasswordItem = {
   id: string;
   title: string;
   username: string;
   password: string;
   website?: string;
+  favorite: boolean;
 };
 
 const PasswordListScreen = () => {
@@ -36,55 +40,65 @@ const PasswordListScreen = () => {
   const [password, setPassword] = useState('');
   const [notes, setNotes] = useState('');
   const [favorite, setFavorite] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [authPassword, setAuthPassword] = useState('');
   const [selectedItem, setSelectedItem] = useState<PasswordItem | null>(null);
   const [actionType, setActionType] = useState<'view' | 'copy' | null>(null);
 
-  // Verifica se o user está autenticado
-  useEffect(() => {
-    if (!user || !user.id) {
-      Alert.alert('Erro', 'Usuário não autenticado');
-      return;
-    }
+  // Função para buscar as senhas do usuário
+  const fetchPasswords = useCallback(async () => {
+    if (!user?.id) return;
     
-    // Carrega as senhas
-    const fetchPasswords = async () => {
-      try {
-        const response = await axios.get(`http://172.20.10.3:5000/api/passwords/${user.id}`, {
-          params: { favorite: favorite.toString() },
-        });
-
-        // Verifique o formato de resposta
-        console.log(response.data);
-
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/api/passwords/${user.id}`);
+      
+      if (response.data && response.data.passwords) {
         const formattedPasswords = response.data.passwords.map((item: any) => ({
-          id: item._id,
+          id: item._id || item.id,
           title: item.name,
           username: item.email,
           password: '********',
+          favorite: item.favorite || false
         }));
 
-        setPasswords(formattedPasswords);
-      } catch (error) {
-        console.error('Erro ao buscar senhas:', error);
-        Alert.alert('Erro', 'Não foi possível carregar as senhas.');
-      }
-    };
+        // Ordenar as senhas - favoritas primeiro
+        const sortedPasswords = formattedPasswords.sort((a: PasswordItem, b: PasswordItem) => {
+          // Se uma é favorita e outra não, a favorita vem primeiro
+          if (a.favorite && !b.favorite) return -1;
+          if (!a.favorite && b.favorite) return 1;
+          // Se ambas são favoritas ou ambas não são, ordena por título
+          return a.title.localeCompare(b.title);
+        });
 
+        setPasswords(sortedPasswords);
+      } else {
+        setPasswords([]);
+      }
+    } catch (error) {
+      // Silenciosamente falha - não mostra erro no console
+      setPasswords([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Carrega as senhas ao entrar na tela ou quando o usuário muda
+  useEffect(() => {
     fetchPasswords();
-  }, [user, favorite]);
+  }, [fetchPasswords]);
 
   // Adiciona nova senha
   const handleAddPassword = async () => {
-    if (!name || !email || !password) {
-      Alert.alert('Erro', 'Preencha todos os campos obrigatórios!');
+    if (!name || !email || !password || !user?.id) {
+      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios!');
       return;
     }
 
     try {
-      const response = await axios.post(`http://172.20.10.3:5000/api/passwords/${user?.id}`, {
+      const response = await axios.post(`${API_URL}/api/passwords/${user.id}`, {
         name,
         email,
         password,
@@ -93,52 +107,98 @@ const PasswordListScreen = () => {
       });
 
       if (response.data.success) {
-        const newPassword: PasswordItem = {
-          id: response.data.password.id,
-          title: name,
-          username: email,
-          password: '********',
-        };
-        setPasswords((prev) => [...prev, newPassword]);
+        // Atualiza a lista de senhas após adicionar nova senha
+        fetchPasswords();
         closeModal();
         Alert.alert('Sucesso', 'Senha criada com sucesso!');
       } else {
-        Alert.alert('Erro', response.data.error || 'Erro ao criar senha');
+        Alert.alert('Atenção', response.data.error || 'Erro ao criar senha');
       }
     } catch (error) {
-      console.error(error);
-      Alert.alert('Erro', 'Erro na comunicação com o servidor');
+      // Silenciosamente falha - não mostra erro no console
+      Alert.alert('Atenção', 'Não foi possível salvar a senha. Tente novamente.');
     }
   };
 
   // Função para revelar a senha
   const revealPassword = async (item: PasswordItem) => {
     try {
-      const response = await axios.get(`http://172.20.10.3:5000/api/passwords/${user?.id}/${item.id}`);
-      const updatedPasswords = passwords.map((p) =>
-        p.id === item.id ? { ...p, password: response.data.password } : p
-      );
-      setPasswords(updatedPasswords);
+      if (!user?.id) return;
+      
+      // Verifica se a senha já está visível e a esconde se estiver
+      if (item.password !== '********') {
+        const updatedPasswords = passwords.map((p) =>
+          p.id === item.id ? { ...p, password: '********' } : p
+        );
+        setPasswords(updatedPasswords);
+        return;
+      }
+      
+      setLoading(true);
+      // Usamos o ID da senha, com fallback para evitar undefined
+      const passwordId = item.id || '';
+      
+      const response = await axios.get(`${API_URL}/api/passwords/${user.id}/${passwordId}`);
+      
+      if (response.data && response.data.password) {
+        // Atualiza a senha na lista de senhas
+        const updatedPasswords = passwords.map((p) =>
+          p.id === item.id ? { ...p, password: response.data.password.password } : p
+        );
+        setPasswords(updatedPasswords);
+      }
     } catch (error) {
-      console.error('Erro ao revelar senha:', error);
-      Alert.alert('Erro', 'Não foi possível revelar a senha.');
+      // Silenciosamente falha - não mostra erro no console
+    } finally {
+      setLoading(false);
     }
   };
 
   // Função para copiar a senha
   const copyPassword = async (item: PasswordItem) => {
     try {
-      const response = await axios.get(`http://172.20.10.3:5000/api/passwords/${user?.id}/${item.id}`);
-      await Clipboard.setStringAsync(response.data.password);
-      Alert.alert('Sucesso', 'Senha copiada para a área de transferência!');
+      // Se a senha já estiver visível, copiamos diretamente
+      if (item.password !== '********') {
+        await Clipboard.setStringAsync(item.password);
+        Alert.alert('Sucesso', 'Senha copiada para a área de transferência!');
+        return;
+      }
+      
+      if (!user?.id) return;
+      
+      setLoading(true);
+      // Usamos o ID da senha, com fallback para evitar undefined
+      const passwordId = item.id || '';
+      
+      const response = await axios.get(`${API_URL}/api/passwords/${user.id}/${passwordId}`);
+      
+      if (response.data && response.data.password) {
+        await Clipboard.setStringAsync(response.data.password.password);
+        Alert.alert('Sucesso', 'Senha copiada para a área de transferência!');
+      }
     } catch (error) {
-      console.error('Erro ao copiar senha:', error);
-      Alert.alert('Erro', 'Não foi possível copiar a senha.');
+      // Silenciosamente falha - não mostra erro no console
+      Alert.alert('Atenção', 'Não foi possível copiar a senha');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Modal de autenticação para visualizar/copiar a senha
   const handleActionPress = (item: PasswordItem, type: 'view' | 'copy') => {
+    // Se for para visualizar e a senha já estiver visível, apenas esconde
+    if (type === 'view' && item.password !== '********') {
+      revealPassword(item);
+      return;
+    }
+    
+    // Se for para copiar e a senha já estiver visível, copia diretamente
+    if (type === 'copy' && item.password !== '********') {
+      copyPassword(item);
+      return;
+    }
+    
+    // Não verificamos o ID aqui, essa verificação será feita na função que revela/copia a senha
     setSelectedItem(item);
     setActionType(type);
     setAuthModalVisible(true);
@@ -146,30 +206,47 @@ const PasswordListScreen = () => {
 
   const handleAuthConfirm = async () => {
     if (!authPassword) {
-      Alert.alert('Erro', 'Digite sua senha para continuar.');
+      Alert.alert('Atenção', 'Digite sua senha para continuar.');
       return;
     }
 
+    if (!user?.id || !selectedItem) {
+      setAuthModalVisible(false);
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await axios.post('http://172.20.10.3:5000/api/passwords/verify-password', {
-        userId: user?.id,
+      const response = await axios.post(`${API_URL}/api/passwords/verify-password`, {
+        userId: user.id,
         password: authPassword,
       });
 
       if (response.data.success) {
-        if (selectedItem && actionType === 'view') {
-          revealPassword(selectedItem);
-        } else if (selectedItem && actionType === 'copy') {
-          copyPassword(selectedItem);
-        }
-        setAuthPassword('');
         setAuthModalVisible(false);
+        setAuthPassword('');
+        
+        // Pequeno atraso para melhorar a experiência
+        setTimeout(async () => {
+          if (actionType === 'view') {
+            await revealPassword(selectedItem);
+          } else if (actionType === 'copy') {
+            await copyPassword(selectedItem);
+          }
+        }, 300);
       } else {
-        Alert.alert('Erro', 'Senha incorreta!');
+        Alert.alert('Atenção', 'Senha incorreta!');
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Erro', 'Erro na verificação da senha.');
+    } catch (error: any) {
+      // Não mostramos o erro no console - isso evita que apareça na tela
+      // Apenas mostramos a mensagem de erro para o usuário
+      if (error.response && error.response.status === 401) {
+        Alert.alert('Atenção', 'Senha incorreta!');
+      } else {
+        Alert.alert('Atenção', 'Não foi possível verificar sua senha. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -188,32 +265,52 @@ const PasswordListScreen = () => {
     setFavorite(false);
   };
 
-  const renderItem = ({ item }: { item: PasswordItem }) => (
-    <View style={styles.passwordItem}>
-      <View style={styles.passwordInfo}>
-        <Text style={styles.passwordTitle}>{item.title}</Text>
-        <Text style={styles.passwordUsername}>{item.username}</Text>
-        <Text style={styles.passwordUsername}>{item.password}</Text>
+  const renderItem = ({ item }: { item: PasswordItem }) => {
+    // Verifica se a senha está visível
+    const isPasswordVisible = item.password !== '********';
+    
+    return (
+      <View style={styles.passwordItem}>
+        <View style={styles.passwordInfo}>
+          <Text style={styles.passwordTitle}>{item.title}</Text>
+          <Text style={styles.passwordUsername}>{item.username}</Text>
+          <Text style={styles.passwordValue}>{item.password}</Text>
+          {item.favorite && (
+            <View style={styles.favoriteBadge}>
+              <Ionicons name="star" size={16} color="#FFD700" />
+              <Text style={styles.favoriteText}>Favorito</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.passwordActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleActionPress(item, 'view')}
+          >
+            <Ionicons 
+              name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
+              size={24} 
+              color="#4285F4" 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, !isPasswordVisible && styles.disabledButton]}
+            onPress={() => isPasswordVisible && handleActionPress(item, 'copy')}
+            disabled={!isPasswordVisible}
+          >
+            <Ionicons 
+              name="copy-outline" 
+              size={24} 
+              color={isPasswordVisible ? "#4285F4" : "#CCCCCC"} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="create-outline" size={24} color="#4285F4" />
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.passwordActions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleActionPress(item, 'view')}
-        >
-          <Ionicons name="eye-outline" size={24} color="#4285F4" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleActionPress(item, 'copy')}
-        >
-          <Ionicons name="copy-outline" size={24} color="#4285F4" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="create-outline" size={24} color="#4285F4" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -225,39 +322,21 @@ const PasswordListScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {passwords.length > 0 ? (
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <Text>Carregando...</Text>
+          </View>
+        )}
+
+        {!loading && passwords.length > 0 ? (
           <FlatList
             data={passwords}
-            renderItem={({ item }) => (
-              <View key={item.id} style={styles.passwordItem}> {/* Adicionando a chave diretamente aqui */}
-                <View style={styles.passwordInfo}>
-                  <Text style={styles.passwordTitle}>{item.title}</Text>
-                  <Text style={styles.passwordUsername}>{item.username}</Text>
-                  <Text style={styles.passwordUsername}>{item.password}</Text>
-                </View>
-                <View style={styles.passwordActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleActionPress(item, 'view')}
-                  >
-                    <Ionicons name="eye-outline" size={24} color="#4285F4" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleActionPress(item, 'copy')}
-                  >
-                    <Ionicons name="copy-outline" size={24} color="#4285F4" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton}>
-                    <Ionicons name="create-outline" size={24} color="#4285F4" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-            keyExtractor={(item) => item.id} // Certificando-se que o id é único
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id || Math.random().toString()}
             contentContainerStyle={styles.listContent}
+            extraData={passwords}
           />
-        ) : (
+        ) : !loading && (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Nenhuma senha salva ainda</Text>
             <Text style={styles.emptySubtext}>Adicione sua primeira senha clicando no botão +</Text>
@@ -469,6 +548,34 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     textAlign: 'center',
+  },
+  favoriteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  favoriteText: {
+    color: '#FFA000',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordValue: {
+    fontSize: 14,
+    color: '#888',
+    fontFamily: 'monospace',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });
 
