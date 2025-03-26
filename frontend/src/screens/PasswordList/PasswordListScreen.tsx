@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
-import PasswordModal from '../../components/modals/passwordModal';
+import PasswordModal from '../../components/modals/PasswordModal';
 
 // IP constante para facilitar manutenção
 const API_URL = 'http://172.20.10.3:5000';

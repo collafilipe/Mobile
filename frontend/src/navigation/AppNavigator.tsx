@@ -9,6 +9,7 @@ import LoginScreen from '../screens/Login/LoginScreen';
 import RegisterScreen from '../screens/Login/RegisterScreen';
 import PasswordListScreen from '../screens/PasswordList/PasswordListScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
+import SecurityScreen from '../screens/Security/SecurityScreen';
 
 import { useAuth } from '../context/AuthContext'; // está certo!
 
@@ -22,14 +23,44 @@ type AppTabsParamList = {
   Profile: undefined;
 };
 
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  Security: undefined;
+};
+
 const AuthStack = createStackNavigator<AuthStackParamList>();
 const AppTabs = createBottomTabNavigator<AppTabsParamList>();
+const ProfileStack = createStackNavigator<ProfileStackParamList>();
 
 const AuthNavigator = () => (
   <AuthStack.Navigator screenOptions={{ headerShown: false }}>
     <AuthStack.Screen name="Login" component={LoginScreen} />
     <AuthStack.Screen name="Register" component={RegisterScreen} />
   </AuthStack.Navigator>
+);
+
+const ProfileNavigator = () => (
+  <ProfileStack.Navigator>
+    <ProfileStack.Screen 
+      name="ProfileMain" 
+      component={ProfileScreen}
+      options={{ 
+        headerShown: false,
+        title: ''
+      }}
+    />
+    <ProfileStack.Screen 
+      name="Security" 
+      component={SecurityScreen}
+      options={{ 
+        title: 'Segurança',
+        headerStyle: {
+          backgroundColor: '#fff',
+        },
+        headerTintColor: '#333',
+      }}
+    />
+  </ProfileStack.Navigator>
 );
 
 const AppTabsNavigator = () => (
@@ -64,7 +95,7 @@ const AppTabsNavigator = () => (
     />
     <AppTabs.Screen
       name="Profile"
-      component={ProfileScreen}
+      component={ProfileNavigator}
       options={{ title: 'Perfil' }}
     />
   </AppTabs.Navigator>
@@ -84,42 +115,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       {user ? (
-        <AppTabs.Navigator
-          screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused, color, size }) => {
-              let iconName: keyof typeof Ionicons.glyphMap;
-
-              if (route.name === 'PasswordList') {
-                iconName = focused ? 'key' : 'key-outline';
-              } else if (route.name === 'Profile') {
-                iconName = focused ? 'person' : 'person-outline';
-              } else {
-                iconName = 'help-outline';
-              }
-
-              return <Ionicons name={iconName} size={size} color={color} />;
-            },
-            tabBarActiveTintColor: '#4285F4',
-            tabBarInactiveTintColor: 'gray',
-          })}
-        >
-          <AppTabs.Screen 
-            name="PasswordList" 
-            component={PasswordListScreen}
-            options={{
-              title: 'Minhas Senhas',
-              headerShown: false
-            }}
-          />
-          <AppTabs.Screen 
-            name="Profile" 
-            component={ProfileScreen}
-            options={{
-              title: 'Perfil',
-              headerShown: false
-            }}
-          />
-        </AppTabs.Navigator>
+        <AppTabsNavigator />
       ) : (
         <AuthNavigator />
       )}
