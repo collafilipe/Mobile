@@ -36,6 +36,12 @@ export class Usuario {
     })
     isAdmin: boolean;
 
+    @Column({ 
+        type: "boolean", 
+        default: false 
+    })
+    pinEnabled: boolean;
+
     // Relação com a entidade Password
     @OneToMany(() => Password, (password: Password) => password.user, {
         cascade: true,

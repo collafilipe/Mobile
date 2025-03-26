@@ -46,11 +46,11 @@ const PasswordListScreen = () => {
 
   // Função para buscar as senhas do usuário
   const fetchPasswords = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.usuarioID) return;
     
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/passwords/${user.id}`);
+      const response = await axios.get(`${API_URL}/api/passwords/${user.usuarioID}`);
       
       if (response.data && response.data.passwords) {
         const formattedPasswords = response.data.passwords.map((item: any) => ({
@@ -91,7 +91,7 @@ const PasswordListScreen = () => {
   // Função para revelar a senha
   const revealPassword = async (item: PasswordItem) => {
     try {
-      if (!user?.id) return;
+      if (!user?.usuarioID) return;
       
       // Verifica se a senha já está visível e a esconde se estiver
       if (item.password !== '********') {
@@ -106,7 +106,7 @@ const PasswordListScreen = () => {
       // Usamos o ID da senha, com fallback para evitar undefined
       const passwordId = item.id || '';
       
-      const response = await axios.get(`${API_URL}/api/passwords/${user.id}/${passwordId}`);
+      const response = await axios.get(`${API_URL}/api/passwords/${user.usuarioID}/${passwordId}`);
       
       if (response.data && response.data.password) {
         // Atualiza a senha na lista de senhas
@@ -132,13 +132,13 @@ const PasswordListScreen = () => {
         return;
       }
       
-      if (!user?.id) return;
+      if (!user?.usuarioID) return;
       
       setLoading(true);
       // Usamos o ID da senha, com fallback para evitar undefined
       const passwordId = item.id || '';
       
-      const response = await axios.get(`${API_URL}/api/passwords/${user.id}/${passwordId}`);
+      const response = await axios.get(`${API_URL}/api/passwords/${user.usuarioID}/${passwordId}`);
       
       if (response.data && response.data.password) {
         await Clipboard.setStringAsync(response.data.password.password);
@@ -181,10 +181,10 @@ const PasswordListScreen = () => {
 
   // Função para deletar a senha
   const handleDeletePassword = async () => {
-    if (!user?.id || !selectedItem) return;
+    if (!user?.usuarioID || !selectedItem) return;
 
     try {
-      const response = await axios.delete(`${API_URL}/api/passwords/${user.id}/${selectedItem.id}`);
+      const response = await axios.delete(`${API_URL}/api/passwords/${user.usuarioID}/${selectedItem.id}`);
 
       if (response.data.success) {
         fetchPasswords();
@@ -211,7 +211,7 @@ const PasswordListScreen = () => {
       return;
     }
 
-    if (!user?.id || !selectedItem) {
+    if (!user?.usuarioID || !selectedItem) {
       setAuthModalVisible(false);
       return;
     }
@@ -219,7 +219,7 @@ const PasswordListScreen = () => {
     setLoading(true);
     try {
       const response = await axios.post(`${API_URL}/api/passwords/verify-password`, {
-        userId: user.id,
+        userId: user.usuarioID,
         password: authPassword,
       });
 
@@ -358,7 +358,7 @@ const PasswordListScreen = () => {
         <PasswordModal
           visible={showModal}
           onClose={closeModal}
-          userId={user?.id || ''}
+          userId={user?.usuarioID || ''}
           isEditing={isEditing}
           editingItem={editingItem}
           onSuccess={fetchPasswords}

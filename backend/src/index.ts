@@ -17,8 +17,8 @@ app.use(cors());
 app.use(express.json());
 
 // Definição das rotas
-app.use("/api/users", userRoutes);
 app.use("/api/passwords", passwordRoutes);
+app.use("/api/users", userRoutes);
 
 // Rota de teste para verificar se o servidor está funcionando
 app.get("/", (req, res) => {

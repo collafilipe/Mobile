@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import { View, ActivityIndicator } from 'react-native';
 
 import LoginScreen from '../screens/Login/LoginScreen';
 import RegisterScreen from '../screens/Login/RegisterScreen';
@@ -73,13 +74,55 @@ const AppNavigator = () => {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    // Pode retornar uma tela de loading
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#4285F4" />
+      </View>
+    );
   }
 
   return (
     <NavigationContainer>
-      {user ? <AppTabsNavigator /> : <AuthNavigator />}
+      {user ? (
+        <AppTabs.Navigator
+          screenOptions={({ route }) => ({
+            tabBarIcon: ({ focused, color, size }) => {
+              let iconName: keyof typeof Ionicons.glyphMap;
+
+              if (route.name === 'PasswordList') {
+                iconName = focused ? 'key' : 'key-outline';
+              } else if (route.name === 'Profile') {
+                iconName = focused ? 'person' : 'person-outline';
+              } else {
+                iconName = 'help-outline';
+              }
+
+              return <Ionicons name={iconName} size={size} color={color} />;
+            },
+            tabBarActiveTintColor: '#4285F4',
+            tabBarInactiveTintColor: 'gray',
+          })}
+        >
+          <AppTabs.Screen 
+            name="PasswordList" 
+            component={PasswordListScreen}
+            options={{
+              title: 'Minhas Senhas',
+              headerShown: false
+            }}
+          />
+          <AppTabs.Screen 
+            name="Profile" 
+            component={ProfileScreen}
+            options={{
+              title: 'Perfil',
+              headerShown: false
+            }}
+          />
+        </AppTabs.Navigator>
+      ) : (
+        <AuthNavigator />
+      )}
     </NavigationContainer>
   );
 };

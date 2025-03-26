@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, ScrollView, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, ScrollView, Animated, ActivityIndicator, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import axios from 'axios';
+import * as LocalAuthentication from 'expo-local-authentication';
+
+const API_URL = 'http://172.20.10.3:5000';
 
 const ProfileScreen = () => {
   const [showAuthMethodModal, setShowAuthMethodModal] = useState(false);
@@ -10,37 +14,105 @@ const ProfileScreen = () => {
   const [userData, setUserData] = useState<any>(null); // Para armazenar os dados completos do usuário
   const { user, logout } = useAuth();
   const slideAnimation = useRef(new Animated.Value(0)).current;
+  const [pinEnabled, setPinEnabled] = useState(false);
 
   // Função para buscar os dados do usuário
   const fetchUserDataFromBackend = async (userId: string) => {
     try {
-      setLoading(true);  // Começa o carregamento
-      const response = await fetch(`http://172.20.10.3:5000/api/users/buscar/${userId}`);
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/api/users/${userId}`);
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          setUserData(data.user);  // Armazena os dados completos do usuário
-        } else {
-          setUserData(null);  // Caso não encontre os dados
-        }
+      if (response.data.success) {
+        setUserData(response.data.user);
       } else {
-        setUserData(null);  // Caso o fetch falhe
+        console.error('Erro ao buscar dados:', response.data.error);
+        setUserData(null);
       }
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
       setUserData(null);
     } finally {
-      setLoading(false);  // Finaliza o carregamento
+      setLoading(false);
     }
   };
 
   // Usando useEffect para chamar a função de fetch assim que o componente for montado
   useEffect(() => {
-    if (user) {
-      fetchUserDataFromBackend(user.id);  // Pega o ID do usuário do AuthContext
+    if (user?.usuarioID) {
+      fetchUserDataFromBackend(user.usuarioID);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user?.usuarioID) {
+      fetchUserSettings();
+    }
+  }, [user]);
+
+  const fetchUserSettings = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/users/${user?.usuarioID}`);
+      if (response.data.success) {
+        setPinEnabled(response.data.user.pinEnabled);
+      }
+    } catch (error) {
+      Alert.alert('Atenção', 'Erro ao carregar configurações');
+    }
+  };
+
+  const handlePinToggle = async () => {
+    try {
+      // Verifica se o dispositivo suporta autenticação biométrica
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      if (!hasHardware) {
+        Alert.alert('Atenção', 'Seu dispositivo não suporta autenticação biométrica');
+        return;
+      }
+
+      // Verifica se há autenticação biométrica configurada
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!isEnrolled) {
+        Alert.alert('Atenção', 'Nenhuma autenticação biométrica configurada');
+        return;
+      }
+
+      // Se estiver desabilitando, apenas atualiza
+      if (pinEnabled) {
+        const response = await axios.put(`${API_URL}/api/users/${user?.usuarioID}/pin`, {
+          pinEnabled: false,
+        });
+
+        if (response.data.success) {
+          setPinEnabled(false);
+          Alert.alert('Sucesso', 'Login com PIN desativado');
+        } else {
+          Alert.alert('Atenção', 'Erro ao desativar login com PIN');
+        }
+        return;
+      }
+
+      // Se estiver habilitando, verifica autenticação primeiro
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Autentique-se para habilitar login com PIN',
+        fallbackLabel: 'Usar senha',
+      });
+
+      if (result.success) {
+        const response = await axios.put(`${API_URL}/api/users/${user?.usuarioID}/pin`, {
+          pinEnabled: true,
+        });
+
+        if (response.data.success) {
+          setPinEnabled(true);
+          Alert.alert('Sucesso', 'Login com PIN ativado');
+        } else {
+          Alert.alert('Atenção', 'Erro ao ativar login com PIN');
+        }
+      }
+    } catch (error) {
+      Alert.alert('Atenção', 'Erro ao alterar configuração de PIN');
+    }
+  };
 
   // Função para logout
   const handleLogout = () => {
@@ -94,6 +166,21 @@ const ProfileScreen = () => {
             <Text style={styles.menuText}>Segurança</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Login com PIN</Text>
+              <Text style={styles.settingDescription}>
+                Use a autenticação biométrica do seu dispositivo para fazer login
+              </Text>
+            </View>
+            <Switch
+              value={pinEnabled}
+              onValueChange={handlePinToggle}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={pinEnabled ? '#4285F4' : '#f4f3f4'}
+            />
+          </View>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -121,6 +208,29 @@ const styles = StyleSheet.create({
   logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FF3B30', marginHorizontal: 20, marginTop: 30, padding: 15, borderRadius: 8 },
   logoutIcon: { marginRight: 10 },
   logoutText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 15,
+  },
+  settingTitle: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#333',
+  },
+  settingDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
 });
 
 export default ProfileScreen;

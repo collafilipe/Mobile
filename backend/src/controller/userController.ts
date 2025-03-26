@@ -170,6 +170,15 @@ export const redefinirSenha = async (token: string, novaSenha: string) => {
 
 export const login = async (email: string, senha: string) => {
     try {
+        // Validação de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return {
+                success: false,
+                error: 'Email inválido'
+            };
+        }
+
         const usuario = await userRepository.findOneBy({ email: email });
 
         if (usuario) {
@@ -185,7 +194,8 @@ export const login = async (email: string, senha: string) => {
                 return {
                     success: true,
                     message: 'Login realizado com sucesso',
-                    token: token
+                    token: token,
+                    usuarioID: usuario.usuarioID
                 };
             } else {
                 return {
@@ -237,3 +247,56 @@ export const alterarUsuario = async (id: string, nome: string, email: string, se
         };
     }
 }
+
+export const pinLogin = async (email: string) => {
+    try {
+        // Validação de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return {
+                success: false,
+                error: 'Email inválido'
+            };
+        }
+
+        const usuario = await userRepository.findOneBy({ email: email });
+
+        if (!usuario) {
+            return {
+                success: false,
+                error: 'Usuário não encontrado'
+            };
+        }
+
+        if (!usuario.pinEnabled) {
+            return {
+                success: false,
+                error: 'Login com PIN não está habilitado para este usuário'
+            };
+        }
+
+        const token = jwt.sign(
+            { usuarioID: usuario.usuarioID },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+
+        return {
+            success: true,
+            message: 'Login realizado com sucesso',
+            token: token,
+            user: {
+                usuarioID: usuario.usuarioID,
+                nome: usuario.nome,
+                email: usuario.email
+            }
+        };
+    } catch (error: any) {
+        console.error('Erro ao fazer login com PIN:', error);
+        return {
+            success: false,
+            error: 'Erro ao fazer login com PIN',
+            details: error.message
+        };
+    }
+};
