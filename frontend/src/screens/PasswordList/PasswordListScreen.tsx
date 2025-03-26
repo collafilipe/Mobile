@@ -7,10 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Switch,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
+import PasswordModal from '../../components/modals/passwordModal';
 
 // IP constante para facilitar manutenção
 const API_URL = 'http://172.20.10.3:5000';
@@ -29,23 +27,22 @@ type PasswordItem = {
   password: string;
   website?: string;
   favorite: boolean;
+  notes?: string;
 };
 
 const PasswordListScreen = () => {
   const { user } = useAuth();
   const [passwords, setPasswords] = useState<PasswordItem[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [notes, setNotes] = useState('');
-  const [favorite, setFavorite] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingItem, setEditingItem] = useState<PasswordItem | null>(null);
 
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [authPassword, setAuthPassword] = useState('');
   const [selectedItem, setSelectedItem] = useState<PasswordItem | null>(null);
-  const [actionType, setActionType] = useState<'view' | 'copy' | null>(null);
+  const [actionType, setActionType] = useState<'view' | 'copy' | 'edit' | 'delete' | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Função para buscar as senhas do usuário
   const fetchPasswords = useCallback(async () => {
@@ -61,7 +58,8 @@ const PasswordListScreen = () => {
           title: item.name,
           username: item.email,
           password: '********',
-          favorite: item.favorite || false
+          favorite: item.favorite || false,
+          notes: item.notes || '',
         }));
 
         // Ordenar as senhas - favoritas primeiro
@@ -89,36 +87,6 @@ const PasswordListScreen = () => {
   useEffect(() => {
     fetchPasswords();
   }, [fetchPasswords]);
-
-  // Adiciona nova senha
-  const handleAddPassword = async () => {
-    if (!name || !email || !password || !user?.id) {
-      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios!');
-      return;
-    }
-
-    try {
-      const response = await axios.post(`${API_URL}/api/passwords/${user.id}`, {
-        name,
-        email,
-        password,
-        notes,
-        favorite,
-      });
-
-      if (response.data.success) {
-        // Atualiza a lista de senhas após adicionar nova senha
-        fetchPasswords();
-        closeModal();
-        Alert.alert('Sucesso', 'Senha criada com sucesso!');
-      } else {
-        Alert.alert('Atenção', response.data.error || 'Erro ao criar senha');
-      }
-    } catch (error) {
-      // Silenciosamente falha - não mostra erro no console
-      Alert.alert('Atenção', 'Não foi possível salvar a senha. Tente novamente.');
-    }
-  };
 
   // Função para revelar a senha
   const revealPassword = async (item: PasswordItem) => {
@@ -184,8 +152,15 @@ const PasswordListScreen = () => {
     }
   };
 
+  // Função para abrir o modal de edição
+  const handleEditPress = async (item: PasswordItem) => {
+    setSelectedItem(item);
+    setActionType('edit');
+    setAuthModalVisible(true);
+  };
+
   // Modal de autenticação para visualizar/copiar a senha
-  const handleActionPress = (item: PasswordItem, type: 'view' | 'copy') => {
+  const handleActionPress = (item: PasswordItem, type: 'view' | 'copy' | 'edit' | 'delete') => {
     // Se for para visualizar e a senha já estiver visível, apenas esconde
     if (type === 'view' && item.password !== '********') {
       revealPassword(item);
@@ -201,6 +176,32 @@ const PasswordListScreen = () => {
     // Não verificamos o ID aqui, essa verificação será feita na função que revela/copia a senha
     setSelectedItem(item);
     setActionType(type);
+    setAuthModalVisible(true);
+  };
+
+  // Função para deletar a senha
+  const handleDeletePassword = async () => {
+    if (!user?.id || !selectedItem) return;
+
+    try {
+      const response = await axios.delete(`${API_URL}/api/passwords/${user.id}/${selectedItem.id}`);
+
+      if (response.data.success) {
+        fetchPasswords();
+        setShowDeleteConfirm(false);
+        Alert.alert('Sucesso', 'Senha excluída com sucesso!');
+      } else {
+        Alert.alert('Atenção', response.data.error || 'Erro ao excluir senha');
+      }
+    } catch (error) {
+      Alert.alert('Atenção', 'Não foi possível excluir a senha. Tente novamente.');
+    }
+  };
+
+  // Função para abrir o modal de confirmação de exclusão
+  const handleDeletePress = (item: PasswordItem) => {
+    setSelectedItem(item);
+    setActionType('delete');
     setAuthModalVisible(true);
   };
 
@@ -232,14 +233,18 @@ const PasswordListScreen = () => {
             await revealPassword(selectedItem);
           } else if (actionType === 'copy') {
             await copyPassword(selectedItem);
+          } else if (actionType === 'edit') {
+            setIsEditing(true);
+            setEditingItem(selectedItem);
+            setShowModal(true);
+          } else if (actionType === 'delete') {
+            setShowDeleteConfirm(true);
           }
         }, 300);
       } else {
         Alert.alert('Atenção', 'Senha incorreta!');
       }
     } catch (error: any) {
-      // Não mostramos o erro no console - isso evita que apareça na tela
-      // Apenas mostramos a mensagem de erro para o usuário
       if (error.response && error.response.status === 401) {
         Alert.alert('Atenção', 'Senha incorreta!');
       } else {
@@ -251,22 +256,19 @@ const PasswordListScreen = () => {
   };
 
   // Funções de controle de Modal
-  const openModal = () => setShowModal(true);
-  const closeModal = () => {
-    setShowModal(false);
-    clearForm();
+  const openModal = () => {
+    setIsEditing(false);
+    setEditingItem(null);
+    setShowModal(true);
   };
 
-  const clearForm = () => {
-    setName('');
-    setEmail('');
-    setPassword('');
-    setNotes('');
-    setFavorite(false);
+  const closeModal = () => {
+    setShowModal(false);
+    setIsEditing(false);
+    setEditingItem(null);
   };
 
   const renderItem = ({ item }: { item: PasswordItem }) => {
-    // Verifica se a senha está visível
     const isPasswordVisible = item.password !== '********';
     
     return (
@@ -304,8 +306,17 @@ const PasswordListScreen = () => {
               color={isPasswordVisible ? "#4285F4" : "#CCCCCC"} 
             />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => handleEditPress(item)}
+          >
             <Ionicons name="create-outline" size={24} color="#4285F4" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => handleDeletePress(item)}
+          >
+            <Ionicons name="trash-outline" size={24} color="#FF5B5B" />
           </TouchableOpacity>
         </View>
       </View>
@@ -343,51 +354,15 @@ const PasswordListScreen = () => {
           </View>
         )}
 
-        {/* Modal de criação */}
-        <Modal visible={showModal} animationType="fade" transparent>
-          <View style={styles.modalOverlay}>
-            <Pressable style={styles.overlayTouchable} onPress={closeModal} />
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalKeyboardContainer}>
-              <View style={styles.modalContainer}>
-                <Text style={styles.modalTitle}>Criar Nova Senha</Text>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Nome*</Text>
-                  <TextInput style={styles.input} placeholder="Ex: Gmail" value={name} onChangeText={setName} />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>E-mail*</Text>
-                  <TextInput style={styles.input} placeholder="Ex: usuario@gmail.com" value={email} onChangeText={setEmail} />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Senha*</Text>
-                  <TextInput style={styles.input} placeholder="Digite a senha" value={password} onChangeText={setPassword} secureTextEntry />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Notas</Text>
-                  <TextInput style={[styles.input, { height: 80 }]} placeholder="Informações extras (opcional)" value={notes} onChangeText={setNotes} multiline />
-                </View>
-
-                <View style={styles.switchContainer}>
-                  <Text>Favorito</Text>
-                  <Switch value={favorite} onValueChange={setFavorite} />
-                </View>
-
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
-                    <Text style={styles.buttonText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleAddPassword}>
-                    <Text style={styles.buttonText}>Salvar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </KeyboardAvoidingView>
-          </View>
-        </Modal>
+        {/* Modal de criação/edição */}
+        <PasswordModal
+          visible={showModal}
+          onClose={closeModal}
+          userId={user?.id || ''}
+          isEditing={isEditing}
+          editingItem={editingItem}
+          onSuccess={fetchPasswords}
+        />
 
         {/* Modal de autenticação */}
         <Modal visible={authModalVisible} transparent animationType="fade">
@@ -407,6 +382,33 @@ const PasswordListScreen = () => {
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.saveButton} onPress={handleAuthConfirm}>
                   <Text style={styles.buttonText}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal de confirmação de exclusão */}
+        <Modal visible={showDeleteConfirm} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Confirmar Exclusão</Text>
+              <Text style={styles.deleteConfirmText}>
+                Tem certeza que deseja excluir a senha "{selectedItem?.title}"?
+                Esta ação não pode ser desfeita.
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowDeleteConfirm(false)}
+                >
+                  <Text style={styles.buttonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.saveButton, { backgroundColor: '#FF5B5B' }]} 
+                  onPress={handleDeletePassword}
+                >
+                  <Text style={styles.buttonText}>Excluir</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -488,17 +490,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  overlayTouchable: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  modalKeyboardContainer: {
-    justifyContent: 'center',
-    flex: 1,
-  },
   modalContainer: {
     backgroundColor: '#fff',
     padding: 20,
@@ -510,24 +501,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
   },
-  inputGroup: {
-    marginBottom: 15,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 5,
-  },
   input: {
     backgroundColor: '#f1f1f1',
     padding: 10,
     borderRadius: 5,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 20,
-    justifyContent: 'flex-end',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -576,6 +554,13 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  deleteConfirmText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });
 
