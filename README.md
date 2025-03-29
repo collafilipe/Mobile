@@ -2,6 +2,67 @@
 
 Aplicação de gerenciamento de senhas desenvolvida com React Native para o frontend e Node.js/Express/TypeORM para o backend.
 
+## Sprint 1: Funcionalidades Básicas e Interface Inicial
+
+### Funcionalidades Implementadas
+- Tela de login e registro de usuário.
+- Cadastro de novas senhas.
+- Listagem de senhas cadastradas.
+- Mostrar senhas favoritas primeiro.
+- Edição de senhas cadastradas.
+- Exclusão de senhas cadastradas.
+- Tela de perfil exibindo informações do usuário.
+
+### Backlog da Sprint 1
+
+#### 1. Autenticação e Usuários
+- [x] Implementar tela de login
+- [x] Implementar tela de registro
+- [x] Criar sistema de autenticação com JWT
+- [x] Implementar validação de campos
+- [x] Criar contexto de autenticação
+- [x] Implementar logout
+
+#### 2. Gerenciamento de Senhas
+- [x] Criar interface para cadastro de senhas
+- [x] Implementar listagem de senhas
+- [x] Adicionar funcionalidade de favoritos
+- [x] Implementar edição de senhas
+- [x] Implementar exclusão de senhas
+- [x] Adicionar confirmação de exclusão
+- [x] Implementar visualização/ocultação de senhas
+- [x] Adicionar funcionalidade de copiar senha
+
+#### 3. Interface do Usuário
+- [x] Criar tela de perfil do usuário
+- [x] Implementar exibição de informações básicas
+- [x] Adicionar avatar com inicial do nome
+- [x] Criar layout responsivo
+- [x] Implementar feedback visual de ações
+- [x] Adicionar indicadores de carregamento
+- [x] Implementar mensagens de sucesso/erro
+
+#### 4. Backend e API
+- [x] Criar rotas para autenticação
+- [x] Implementar endpoints para CRUD de senhas
+- [x] Adicionar validação de dados
+- [x] Implementar tratamento de erros
+- [x] Criar sistema de logs
+- [x] Implementar criptografia de senhas
+
+#### 5. Banco de Dados
+- [x] Criar entidades (Usuário e Senha)
+- [x] Implementar relacionamentos
+- [x] Configurar migrations
+- [x] Adicionar índices para otimização
+- [x] Implementar soft delete
+
+#### 6. Segurança Básica
+- [x] Implementar hash de senhas
+- [x] Adicionar validação de token
+- [x] Implementar proteção de rotas
+- [x] Adicionar verificação de senha para ações sensíveis
+
 ## Configuração do Ambiente
 
 ### Pré-requisitos
