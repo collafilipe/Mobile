@@ -133,7 +133,7 @@ const LoginScreen = () => {
               <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Nome de usuário"
+                placeholder="E-mail"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
