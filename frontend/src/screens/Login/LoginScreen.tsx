@@ -56,7 +56,7 @@ const LoginScreen = () => {
       const success = await login(username, password);
 
       if (!success) {
-        Alert.alert('Erro', 'Usuário ou senha inválidos');
+        console.log('Erro', 'Usuário ou senha inválidos');
       }
 
       // Se o login for bem-sucedido, o AppNavigator cuida da navegação!
