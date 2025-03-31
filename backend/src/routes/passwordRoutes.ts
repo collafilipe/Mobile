@@ -115,7 +115,7 @@ router.post('/:userId', async (req: Request, res: Response) => {
     const { userId } = req.params;
     const { name, email, password, notes, favorite } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !password) {
         return res.status(400).json({ error: 'Campos obrigatórios não fornecidos' });
     }
 

@@ -76,8 +76,8 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   };
 
   const handleSave = async () => {
-    if (!name || !email || (!isEditing && !password)) {
-      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios!');
+    if (!name || (!isEditing && !password)) {
+      Alert.alert('Atenção', 'Preencha os campos obrigatórios!');
       return;
     }
 
@@ -146,7 +146,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>E-mail*</Text>
+                <Text style={styles.inputLabel}>E-mail</Text>
                 <TextInput 
                   style={styles.input} 
                   placeholder="Ex: usuario@gmail.com" 
