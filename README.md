@@ -12,6 +12,7 @@ Aplicação de gerenciamento de senhas desenvolvida com React Native para o fron
 - Edição de senhas cadastradas.
 - Exclusão de senhas cadastradas.
 - Tela de perfil exibindo informações do usuário.
+- Organização de senhas por importância.
 
 ### Backlog da Sprint 1
 
@@ -32,6 +33,7 @@ Aplicação de gerenciamento de senhas desenvolvida com React Native para o fron
 - [x] Adicionar confirmação de exclusão
 - [x] Implementar visualização/ocultação de senhas
 - [x] Adicionar funcionalidade de copiar senha
+- [x] Implementar organização de senhas por importância
 
 #### 3. Interface do Usuário
 - [x] Criar tela de perfil do usuário
