@@ -70,6 +70,11 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
     setFavorite(false);
   };
 
+  const handleClose = () => {
+    clearForm();
+    onClose();
+  };
+
   const handleSave = async () => {
     if (!name || !email || (!isEditing && !password)) {
       Alert.alert('Atenção', 'Preencha todos os campos obrigatórios!');
@@ -89,7 +94,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
         if (response.data.success) {
           Alert.alert('Sucesso', 'Senha atualizada com sucesso!');
           onSuccess();
-          onClose();
+          handleClose();
         } else {
           Alert.alert('Atenção', response.data.error || 'Erro ao atualizar senha');
         }
@@ -106,7 +111,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
           Alert.alert('Sucesso', 'Senha criada com sucesso!');
           clearForm();
           onSuccess();
-          onClose();
+          handleClose();
         } else {
           Alert.alert('Atenção', response.data.error || 'Erro ao criar senha');
         }
@@ -119,7 +124,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   return (
     <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.modalOverlay}>
-        <Pressable style={styles.overlayTouchable} onPress={onClose} />
+        <Pressable style={styles.overlayTouchable} onPress={handleClose} />
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={styles.modalKeyboardContainer}
@@ -178,7 +183,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               </View>
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
                   <Text style={styles.buttonText}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
