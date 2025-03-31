@@ -22,23 +22,10 @@ export class Password {
     name: string;
 
     @Column({ 
-        type: "varchar", 
-        length: 100, 
-        nullable: false 
-    })
-    email: string;
-
-    @Column({ 
         type: "text", 
         nullable: false 
     })
     password: string;
-
-    @Column({ 
-        type: "text", 
-        nullable: true 
-    })
-    notes: string;
 
     @Column({ 
         type: "boolean", 

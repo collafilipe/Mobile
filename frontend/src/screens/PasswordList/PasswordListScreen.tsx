@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
-import PasswordModal from '../../components/modals/PasswordModal';
+import PasswordModal from '../../components/modals/passwordModal';
 
 // IP constante para facilitar manutenção
 const API_URL = 'http://172.20.10.3:5000';
@@ -23,11 +23,9 @@ const API_URL = 'http://172.20.10.3:5000';
 type PasswordItem = {
   id: string;
   title: string;
-  username: string;
   password: string;
   website?: string;
   favorite: boolean;
-  notes?: string;
 };
 
 const PasswordListScreen = () => {
@@ -56,10 +54,8 @@ const PasswordListScreen = () => {
         const formattedPasswords = response.data.passwords.map((item: any) => ({
           id: item._id || item.id,
           title: item.name,
-          username: item.email,
           password: '********',
           favorite: item.favorite || false,
-          notes: item.notes || '',
         }));
 
         // Ordenar as senhas - favoritas primeiro
@@ -275,7 +271,6 @@ const PasswordListScreen = () => {
       <View style={styles.passwordItem}>
         <View style={styles.passwordInfo}>
           <Text style={styles.passwordTitle}>{item.title}</Text>
-          <Text style={styles.passwordUsername}>{item.username}</Text>
           <Text style={styles.passwordValue}>{item.password}</Text>
           {item.favorite && (
             <View style={styles.favoriteBadge}>
@@ -457,10 +452,6 @@ const styles = StyleSheet.create({
   passwordTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  passwordUsername: {
-    fontSize: 14,
-    color: '#888',
   },
   passwordActions: {
     flexDirection: 'row',

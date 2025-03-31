@@ -86,9 +86,7 @@ export const buscarSenhaPorId = async (userId: string, passwordId: string) => {
 export const criarSenha = async (
     userId: string,
     name: string,
-    email: string,
     password: string,
-    notes?: string,
     favorite: boolean = false
 ) => {
     try {
@@ -103,9 +101,7 @@ export const criarSenha = async (
 
         const novaSenha = passwordRepository.create({
             name,
-            email,
             password,
-            notes,
             favorite,
             user
         });
@@ -165,9 +161,7 @@ export const atualizarSenha = async (
     userId: string,
     id: string,
     name?: string,
-    email?: string,
     passwordValue?: string,
-    notes?: string,
     favorite?: boolean
 ) => {
     try {
@@ -187,9 +181,7 @@ export const atualizarSenha = async (
 
         // Atualizações condicionais
         if (name !== undefined) senha.name = name;
-        if (email !== undefined) senha.email = email;
         if (passwordValue !== undefined) senha.password = passwordValue;
-        if (notes !== undefined) senha.notes = notes;
         if (favorite !== undefined) senha.favorite = favorite;
 
         const senhaAtualizada = await passwordRepository.save(senha);

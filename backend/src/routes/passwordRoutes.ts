@@ -113,14 +113,14 @@ router.post('/verify-password', async (req: Request, res: Response) => {
  */
 router.post('/:userId', async (req: Request, res: Response) => {
     const { userId } = req.params;
-    const { name, email, password, notes, favorite } = req.body;
+    const { name, password, favorite } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !password) {
         return res.status(400).json({ error: 'Campos obrigatórios não fornecidos' });
     }
 
     try {
-        const result = await criarSenha(userId, name, email, password, notes, favorite);
+        const result = await criarSenha(userId, name, password, favorite);
 
         if (!result.success) {
             return res.status(404).json(result);
@@ -138,10 +138,10 @@ router.post('/:userId', async (req: Request, res: Response) => {
  */
 router.put('/:userId/:passwordId', async (req: Request, res: Response) => {
     const { userId, passwordId } = req.params;
-    const { name, email, password, notes, favorite } = req.body;
+    const { name, password, favorite } = req.body;
 
     try {
-        const result = await atualizarSenha(userId, passwordId, name, email, password, notes, favorite);
+        const result = await atualizarSenha(userId, passwordId, name, password, favorite);
 
         if (!result.success) {
             return res.status(404).json(result);

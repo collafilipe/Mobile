@@ -24,7 +24,6 @@ type PasswordItem = {
   password: string;
   website?: string;
   favorite: boolean;
-  notes?: string;
 };
 
 type PasswordModalProps = {
@@ -45,17 +44,13 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   onSuccess
 }) => {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [notes, setNotes] = useState('');
   const [favorite, setFavorite] = useState(false);
 
   useEffect(() => {
     if (isEditing && editingItem) {
       setName(editingItem.title);
-      setEmail(editingItem.username);
       setPassword('********');
-      setNotes(editingItem.notes || '');
       setFavorite(editingItem.favorite);
     } else {
       clearForm();
@@ -64,14 +59,17 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
 
   const clearForm = () => {
     setName('');
-    setEmail('');
     setPassword('');
-    setNotes('');
     setFavorite(false);
   };
 
+  const handleClose = () => {
+    clearForm();
+    onClose();
+  };
+
   const handleSave = async () => {
-    if (!name || !email || (!isEditing && !password)) {
+    if (!name || (!isEditing && !password)) {
       Alert.alert('Atenção', 'Preencha todos os campos obrigatórios!');
       return;
     }
@@ -80,25 +78,21 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
       if (isEditing && editingItem) {
         const response = await axios.put(`${API_URL}/api/passwords/${userId}/${editingItem.id}`, {
           name,
-          email,
           password: password === '********' ? undefined : password,
-          notes,
           favorite,
         });
 
         if (response.data.success) {
           Alert.alert('Sucesso', 'Senha atualizada com sucesso!');
           onSuccess();
-          onClose();
+          handleClose();
         } else {
           Alert.alert('Atenção', response.data.error || 'Erro ao atualizar senha');
         }
       } else {
         const response = await axios.post(`${API_URL}/api/passwords/${userId}`, {
           name,
-          email,
           password,
-          notes,
           favorite,
         });
 
@@ -106,7 +100,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
           Alert.alert('Sucesso', 'Senha criada com sucesso!');
           clearForm();
           onSuccess();
-          onClose();
+          handleClose();
         } else {
           Alert.alert('Atenção', response.data.error || 'Erro ao criar senha');
         }
@@ -119,7 +113,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   return (
     <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.modalOverlay}>
-        <Pressable style={styles.overlayTouchable} onPress={onClose} />
+        <Pressable style={styles.overlayTouchable} onPress={handleClose} />
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={styles.modalKeyboardContainer}
@@ -141,16 +135,6 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>E-mail*</Text>
-                <TextInput 
-                  style={styles.input} 
-                  placeholder="Ex: usuario@gmail.com" 
-                  value={email} 
-                  onChangeText={setEmail} 
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Senha{isEditing ? ' (deixe em branco para manter a atual)' : '*'}</Text>
                 <TextInput 
                   style={styles.input} 
@@ -161,24 +145,13 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                 />
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Notas</Text>
-                <TextInput 
-                  style={[styles.input, { height: 80 }]} 
-                  placeholder="Informações extras (opcional)" 
-                  value={notes} 
-                  onChangeText={setNotes} 
-                  multiline 
-                />
-              </View>
-
               <View style={styles.switchContainer}>
                 <Text>Favorito</Text>
                 <Switch value={favorite} onValueChange={setFavorite} />
               </View>
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
                   <Text style={styles.buttonText}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
