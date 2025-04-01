@@ -10,12 +10,14 @@ import RegisterScreen from '../screens/Login/RegisterScreen';
 import PasswordListScreen from '../screens/PasswordList/PasswordListScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 import SecurityScreen from '../screens/Security/SecurityScreen';
+import ForgotPasswordScreen from '../screens/Login/ForgotPasswordScreen';
 
 import { useAuth } from '../context/AuthContext'; // está certo!
 
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
 };
 
 type AppTabsParamList = {
@@ -26,6 +28,7 @@ type AppTabsParamList = {
 export type ProfileStackParamList = {
   ProfileMain: undefined;
   Security: undefined;
+  ForgotPassword: undefined;
 };
 
 const AuthStack = createStackNavigator<AuthStackParamList>();
@@ -36,6 +39,7 @@ const AuthNavigator = () => (
   <AuthStack.Navigator screenOptions={{ headerShown: false }}>
     <AuthStack.Screen name="Login" component={LoginScreen} />
     <AuthStack.Screen name="Register" component={RegisterScreen} />
+    <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
   </AuthStack.Navigator>
 );
 
@@ -54,6 +58,17 @@ const ProfileNavigator = () => (
       component={SecurityScreen}
       options={{ 
         title: 'Segurança',
+        headerStyle: {
+          backgroundColor: '#fff',
+        },
+        headerTintColor: '#333',
+      }}
+    />
+    <ProfileStack.Screen 
+      name="ForgotPassword" 
+      component={ForgotPasswordScreen}
+      options={{ 
+        title: 'Alterar Senha',
         headerStyle: {
           backgroundColor: '#fff',
         },

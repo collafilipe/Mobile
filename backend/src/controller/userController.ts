@@ -130,7 +130,7 @@ export const mandarToken = async(email: string) => {
             from: 'sync23417@gmail.com',
             to: email,
             subject: 'Recuperação de senha',
-            text: `Você solicitou a redefinição de senha. Clique no link abaixo para redefinir sua senha:\n\nhttp://localhost:3000/reset-password/${token}`
+            text: `Você solicitou a redefinição de senha. Clique no link abaixo para redefinir sua senha:\n\nhttp://192.168.0.109:8081/reset-password/${token}`
         }
 
         transporter.sendMail(mailOptions, (error, info) => {

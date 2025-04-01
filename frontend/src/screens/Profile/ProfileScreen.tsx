@@ -87,7 +87,10 @@ const ProfileScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Configurações</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
             <Ionicons name="lock-closed-outline" size={24} color="#333" style={styles.menuIcon} />
             <Text style={styles.menuText}>Alterar Senha</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
