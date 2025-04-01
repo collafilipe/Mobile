@@ -6,10 +6,11 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../navigation/AppNavigator';
 import axios from 'axios';
+import { generateStrongPassword } from '../../utils/passwordGenerator';
 
 type RegisterScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Register'>;
 
-const API_URL = 'http://172.20.10.3:5000/api/users/cadastrar';
+const API_URL = 'http://192.168.0.109:5000/api/users/cadastrar';
 
 const RegisterScreen = () => {
   const navigation = useNavigation<RegisterScreenNavigationProp>();
@@ -56,6 +57,12 @@ const RegisterScreen = () => {
     navigation.navigate('Login');
   };
 
+  const handleGeneratePassword = () => {
+    const newPassword = generateStrongPassword();
+    setPassword(newPassword);
+    setConfirmPassword(newPassword);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -100,16 +107,28 @@ const RegisterScreen = () => {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color="#666"
-                />
-              </TouchableOpacity>
+              <View style={styles.passwordActions}>
+                <TouchableOpacity
+                  style={styles.generateIcon}
+                  onPress={handleGeneratePassword}
+                >
+                  <Ionicons
+                    name="key-outline"
+                    size={20}
+                    color="#4285F4"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.inputContainer}>
@@ -227,6 +246,14 @@ const styles = StyleSheet.create({
     color: '#4285F4',
     fontWeight: 'bold',
     fontSize: 14,
+    marginLeft: 5,
+  },
+  passwordActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  generateIcon: {
+    padding: 10,
     marginLeft: 5,
   },
 });

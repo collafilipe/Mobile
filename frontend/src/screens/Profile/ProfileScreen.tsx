@@ -10,7 +10,7 @@ import axios from 'axios';
 
 type ProfileScreenNavigationProp = StackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
-const API_URL = 'http://172.20.10.3:5000';
+const API_URL = 'http://192.168.0.109:5000';
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();

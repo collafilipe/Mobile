@@ -35,7 +35,7 @@ export const useAuth = () => {
   return context;
 };
 
-const API_URL = 'http://172.20.10.3:5000'; // Coloque o IP correto
+const API_URL = 'http://192.168.0.109:5000'; // Coloque o IP correto
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

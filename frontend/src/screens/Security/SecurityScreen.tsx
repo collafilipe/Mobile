@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import * as LocalAuthentication from 'expo-local-authentication';
 
-const API_URL = 'http://172.20.10.3:5000';
+const API_URL = 'http://192.168.0.109:5000';
 
 const SecurityScreen = () => {
   const { user } = useAuth();
