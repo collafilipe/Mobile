@@ -72,7 +72,29 @@ router.post('/esqueci-senha', async (req: Request, res: Response) => {
 router.put('/redefinir-senha/:token/:novaSenha', async (req: Request, res: Response) => {
     const token = req.params.token;
     const novaSenha = req.params.novaSenha;
-    res.json(await redefinirSenha(token, novaSenha));
+    
+    try {
+        const resultado = await redefinirSenha(token, novaSenha);
+        if (typeof resultado === 'string') {
+            return res.status(400).json({ 
+                success: false, 
+                error: resultado 
+            });
+        }
+        
+        return res.json({ 
+            success: true, 
+            message: 'Senha redefinida com sucesso',
+            usuarioID: resultado.usuarioID 
+        });
+    } catch (error: any) {
+        console.error('Erro ao redefinir senha:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao redefinir senha. Verifique se o token é válido.', 
+            details: error.message 
+        });
+    }
 });
 
 router.put('/alterar-usuario/:id', async (req: Request, res: Response) => {
@@ -213,4 +235,4 @@ router.get('/email/:email', async (req: Request, res: Response) => {
     }
 });
 
-export { router as userRoutes }; 
+export { router as userRoutes };

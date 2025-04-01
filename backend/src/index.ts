@@ -5,6 +5,7 @@ import { config } from "dotenv";
 import { initializeDatabase } from "./data-source";
 import { userRoutes } from "./routes/userRoutes";
 import { passwordRoutes } from "./routes/passwordRoutes";
+import { passwordLogRoutes } from "./routes/passwordLogRoutes";
 
 // Carrega as variáveis de ambiente
 config();
@@ -19,6 +20,7 @@ app.use(express.json());
 // Definição das rotas
 app.use("/api/passwords", passwordRoutes);
 app.use("/api/users", userRoutes);
+app.use('/api/password-logs', passwordLogRoutes);
 
 // Rota de teste para verificar se o servidor está funcionando
 app.get("/", (req, res) => {

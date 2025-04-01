@@ -104,7 +104,6 @@ export const validarToken = async (token: string) => {
 }
 
 export const mandarToken = async(email: string) => {
-
     try {
         if (!email) {
             console.log("Email não fornecido!");
@@ -130,7 +129,21 @@ export const mandarToken = async(email: string) => {
             from: 'sync23417@gmail.com',
             to: email,
             subject: 'Recuperação de senha',
-            text: `Você solicitou a redefinição de senha. Clique no link abaixo para redefinir sua senha:\n\nhttp://192.168.0.109:8081/reset-password/${token}`
+            text: `Você solicitou a redefinição de senha. Clique no link abaixo para redefinir sua senha:\n\nhttp://172.20.10.3:8081/reset-password/${token}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                    <h2 style="color: #4285F4; text-align: center;">Recuperação de Senha</h2>
+                    <p>Você solicitou a redefinição de senha para sua conta no Gerenciador de Senhas.</p>
+                    <p>Clique no botão abaixo para criar uma nova senha:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="http://172.20.10.3:8081/reset-password/${token}" 
+                           style="background-color: #4285F4; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            Redefinir Minha Senha
+                        </a>
+                    </div>
+                    <p style="color: #666; font-size: 14px;">Este link é válido por 1 hora. Se você não solicitou esta alteração, ignore este email.</p>
+                </div>
+            `
         }
 
         transporter.sendMail(mailOptions, (error, info) => {
@@ -141,10 +154,12 @@ export const mandarToken = async(email: string) => {
             console.log('Email enviado:', info.response);
             return 'Email enviado'
         })
-        } catch (error) {
-            console.error('Erro ao mandar token:', error);
-            return 'Erro ao mandar token'
-        }
+        
+        return 'Email enviado'
+    } catch (error) {
+        console.error('Erro ao mandar token:', error);
+        return 'Erro ao mandar token'
+    }
 }
 
 export const redefinirSenha = async (token: string, novaSenha: string) => {

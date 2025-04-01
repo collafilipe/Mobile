@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import PasswordModal from '../../components/modals/passwordModal';
 
 // IP constante para facilitar manutenção
-const API_URL = 'http://192.168.0.109:5000';
+const API_URL = 'http://172.20.10.3:5000';
 
 type PasswordItem = {
   id: string;

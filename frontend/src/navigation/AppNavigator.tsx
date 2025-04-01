@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +10,8 @@ import PasswordListScreen from '../screens/PasswordList/PasswordListScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 import SecurityScreen from '../screens/Security/SecurityScreen';
 import ForgotPasswordScreen from '../screens/Login/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/Login/ResetPasswordScreen';
+import ForgotPasswordProfileScreen from '../screens/Login/ForgotPasswordProfile';
 
 import { useAuth } from '../context/AuthContext'; // está certo!
 
@@ -18,6 +19,8 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  ForgotPasswordProfile: undefined;
+  ResetPassword: { token: string } | undefined;
 };
 
 type AppTabsParamList = {
@@ -29,6 +32,7 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   Security: undefined;
   ForgotPassword: undefined;
+  ForgotPasswordProfile: undefined;
 };
 
 const AuthStack = createStackNavigator<AuthStackParamList>();
@@ -40,6 +44,8 @@ const AuthNavigator = () => (
     <AuthStack.Screen name="Login" component={LoginScreen} />
     <AuthStack.Screen name="Register" component={RegisterScreen} />
     <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+    <AuthStack.Screen name='ForgotPasswordProfile' component={ForgotPasswordProfileScreen} />
   </AuthStack.Navigator>
 );
 
@@ -66,7 +72,7 @@ const ProfileNavigator = () => (
     />
     <ProfileStack.Screen 
       name="ForgotPassword" 
-      component={ForgotPasswordScreen}
+      component={ForgotPasswordProfileScreen}
       options={{ 
         title: 'Alterar Senha',
         headerStyle: {
@@ -127,15 +133,8 @@ const AppNavigator = () => {
     );
   }
 
-  return (
-    <NavigationContainer>
-      {user ? (
-        <AppTabsNavigator />
-      ) : (
-        <AuthNavigator />
-      )}
-    </NavigationContainer>
-  );
+  // Return the navigator without the NavigationContainer
+  return user ? <AppTabsNavigator /> : <AuthNavigator />;
 };
 
 export default AppNavigator;

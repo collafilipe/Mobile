@@ -3,6 +3,7 @@ import { Password } from "../entity/password";
 import { Usuario } from "../entity/users";
 import bcrypt from "bcrypt";
 import { getRepository } from "typeorm";
+import { createPasswordLog } from "./passwordLogController";
 
 const passwordRepository = AppDataSource.getRepository(Password);
 const userRepository = AppDataSource.getRepository(Usuario);
@@ -107,6 +108,9 @@ export const criarSenha = async (
         });
 
         const senhaSalva = await passwordRepository.save(novaSenha);
+        
+        // Log the action
+        await createPasswordLog(userId, senhaSalva.id, name, "create");
 
         return {
             success: true,
@@ -139,8 +143,14 @@ export const excluirSenha = async (userId: string, id: string) => {
                 error: 'Senha não encontrada'
             };
         }
-
+        
+        // Store the name before deletion for logging
+        const passwordName = senha.name;
+        
         await passwordRepository.remove(senha);
+        
+        // Log the action
+        await createPasswordLog(userId, id, passwordName, "delete");
 
         return {
             success: true,
@@ -179,12 +189,58 @@ export const atualizarSenha = async (
             };
         }
 
+        // Track changes for logging
+        const originalName = senha.name;
+        const originalPassword = senha.password;
+        const originalFavorite = senha.favorite;
+
         // Atualizações condicionais
         if (name !== undefined) senha.name = name;
         if (passwordValue !== undefined) senha.password = passwordValue;
         if (favorite !== undefined) senha.favorite = favorite;
 
         const senhaAtualizada = await passwordRepository.save(senha);
+        
+        // Log each change separately
+        if (name !== undefined && name !== originalName) {
+            await createPasswordLog(
+                userId, 
+                id, 
+                senhaAtualizada.name, 
+                "update",
+                "name",
+                originalName, 
+                name
+            );
+        }
+        
+        if (passwordValue !== undefined && passwordValue !== originalPassword) {
+            // Log password change with actual values for sensitive data
+            await createPasswordLog(
+                userId, 
+                id, 
+                senhaAtualizada.name, 
+                "update",
+                "password",
+                "********", // Show asterisks in the UI
+                "********", // Show asterisks in the UI
+                true, // Mark as sensitive data
+                originalPassword, // Original password for encrypted storage
+                passwordValue // New password for encrypted storage
+            );
+        }
+        
+        if (favorite !== undefined && favorite !== originalFavorite) {
+            await createPasswordLog(
+                userId, 
+                id, 
+                senhaAtualizada.name, 
+                "update",
+                "favorite",
+                originalFavorite ? "Sim" : "Não", 
+                favorite ? "Sim" : "Não"
+            );
+        }
 
         return {
             success: true,

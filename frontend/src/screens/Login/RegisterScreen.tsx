@@ -10,7 +10,7 @@ import { generateStrongPassword } from '../../utils/passwordGenerator';
 
 type RegisterScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Register'>;
 
-const API_URL = 'http://192.168.0.109:5000/api/users/cadastrar';
+const API_URL = 'http://172.20.10.3:5000/api/users/cadastrar';
 
 const RegisterScreen = () => {
   const navigation = useNavigation<RegisterScreenNavigationProp>();
