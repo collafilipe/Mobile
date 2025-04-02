@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { Password } from '../entity/password';
 import { listarSenhas } from './passwordController';
+import { checkAndRecordLoginIp, sendNewIpLoginNotification } from "./loginIpController";
 
 const userRepository = AppDataSource.getRepository(Usuario);
 
@@ -183,7 +184,7 @@ export const redefinirSenha = async (token: string, novaSenha: string) => {
     } 
 }
 
-export const login = async (email: string, senha: string) => {
+export const login = async (email: string, senha: string, ipAddress: string, userAgent?: string) => {
     try {
         // Validação de email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -206,6 +207,26 @@ export const login = async (email: string, senha: string) => {
                     { expiresIn: "1h" }
                 );
 
+                // Track IP in background after returning the success response
+                // No need to await these operations
+                if (ipAddress) {
+                    // Use .then() to handle the promise without awaiting
+                    checkAndRecordLoginIp(usuario.usuarioID, ipAddress, userAgent)
+                        .then(({ isNewIp, ipInfo }) => {
+                            // Only send notification if IP is untrusted
+                            if (!ipInfo.isTrusted) {
+                                console.log('Sending notification in background for IP:', ipAddress);
+                                // Send email notification asynchronously
+                                sendNewIpLoginNotification(usuario, ipAddress, userAgent)
+                                    .catch(err => console.error('Failed to send IP notification:', err));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('IP tracking error (background):', error);
+                        });
+                }
+
+                // Return success response immediately without waiting for IP tracking
                 return {
                     success: true,
                     message: 'Login realizado com sucesso',
@@ -263,7 +284,7 @@ export const alterarUsuario = async (id: string, nome: string, email: string, se
     }
 }
 
-export const pinLogin = async (email: string) => {
+export const pinLogin = async (email: string, ipAddress: string, userAgent?: string) => {
     try {
         // Validação de email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -296,6 +317,16 @@ export const pinLogin = async (email: string) => {
             { expiresIn: "1h" }
         );
 
+        // Just record IP in the background for PIN logins
+        if (ipAddress) {
+            // Don't await, run in background
+            checkAndRecordLoginIp(usuario.usuarioID, ipAddress, userAgent)
+                .catch(error => {
+                    console.error('IP tracking error (background):', error);
+                });
+        }
+
+        // Return success immediately
         return {
             success: true,
             message: 'Login realizado com sucesso',
@@ -314,4 +345,4 @@ export const pinLogin = async (email: string) => {
             details: error.message
         };
     }
-};
+}

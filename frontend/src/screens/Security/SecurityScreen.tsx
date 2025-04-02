@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { format } from 'date-fns';
+import { format, formatDistance } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const API_URL = 'http://172.20.10.3:5000';
@@ -34,6 +34,16 @@ type PasswordLogItem = {
   containsSensitiveData?: boolean;
 };
 
+type LoginIpItem = {
+  id: string;
+  ipAddress: string;
+  deviceInfo: string;
+  location?: string;
+  isTrusted: boolean;
+  firstSeen: string;
+  lastSeen: string;
+};
+
 const SecurityScreen = () => {
   const { user } = useAuth();
   const [pinEnabled, setPinEnabled] = useState(false);
@@ -49,11 +59,15 @@ const SecurityScreen = () => {
   const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showAllLogs, setShowAllLogs] = useState(false);
+  const [loginIps, setLoginIps] = useState<LoginIpItem[]>([]);
+  const [ipsLoading, setIpsLoading] = useState(false);
+  const [updatingIpId, setUpdatingIpId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.usuarioID) {
       fetchUserSettings();
       fetchPasswordLogs();
+      fetchLoginIps();
     }
   }, [user]);
 
@@ -131,6 +145,20 @@ const SecurityScreen = () => {
     }
   };
 
+  const fetchLoginIps = async () => {
+    try {
+      setIpsLoading(true);
+      const response = await axios.get(`${API_URL}/api/login-ips/${user?.usuarioID}`);
+      if (response.data && response.data.success) {
+        setLoginIps(response.data.ips);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar IPs de login:', error);
+    } finally {
+      setIpsLoading(false);
+    }
+  };
+
   const handleTogglePin = async (value: boolean) => {
     try {
       setSaveLoading(true);
@@ -150,6 +178,28 @@ const SecurityScreen = () => {
       setPinEnabled(!value);
     } finally {
       setSaveLoading(false);
+    }
+  };
+
+  const handleToggleIpTrust = async (ipId: string, isTrusted: boolean) => {
+    try {
+      setUpdatingIpId(ipId);
+      const response = await axios.put(
+        `${API_URL}/api/login-ips/${user?.usuarioID}/${ipId}`,
+        { isTrusted }
+      );
+      
+      if (response.data && response.data.success) {
+        // Update local state to reflect the change
+        setLoginIps(prev => 
+          prev.map(ip => ip.id === ipId ? { ...ip, isTrusted } : ip)
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar confiabilidade do IP:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar o status do IP');
+    } finally {
+      setUpdatingIpId(null);
     }
   };
 
@@ -254,6 +304,62 @@ const SecurityScreen = () => {
       </View>
     </View>
   );
+
+  const renderLoginIpItem = ({ item }: { item: LoginIpItem }) => {
+    const isUpdating = updatingIpId === item.id;
+    
+    return (
+      <View style={styles.ipItem}>
+        <View style={styles.ipMainInfo}>
+          <Text style={styles.ipAddress}>{item.ipAddress}</Text>
+          <View style={[
+            styles.trustBadge, 
+            item.isTrusted ? styles.trustedBadge : styles.untrustedBadge
+          ]}>
+            <Text style={styles.trustBadgeText}>
+              {item.isTrusted ? 'Confiável' : 'Não confiável'}
+            </Text>
+          </View>
+        </View>
+        
+        <Text style={styles.ipDevice}>{item.deviceInfo || 'Dispositivo desconhecido'}</Text>
+        
+        <View style={styles.ipTimeInfo}>
+          <Text style={styles.ipTimeLabel}>Primeiro acesso:</Text>
+          <Text style={styles.ipTimeValue}>{format(new Date(item.firstSeen), 'dd/MM/yyyy HH:mm')}</Text>
+        </View>
+        
+        <View style={styles.ipTimeInfo}>
+          <Text style={styles.ipTimeLabel}>Último acesso:</Text>
+          <Text style={styles.ipTimeValue}>
+            {formatDistance(new Date(item.lastSeen), new Date(), { addSuffix: true, locale: ptBR })}
+          </Text>
+        </View>
+        
+        <TouchableOpacity 
+          style={[styles.ipTrustButton, item.isTrusted ? styles.untrust : styles.trust]}
+          onPress={() => handleToggleIpTrust(item.id, !item.isTrusted)}
+          disabled={isUpdating}
+        >
+          {isUpdating ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Ionicons 
+                name={item.isTrusted ? "close-circle-outline" : "checkmark-circle-outline"} 
+                size={16} 
+                color="#fff" 
+                style={styles.ipTrustButtonIcon} 
+              />
+              <Text style={styles.ipTrustButtonText}>
+                {item.isTrusted ? 'Remover confiança' : 'Marcar como confiável'}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const getFieldLabel = (fieldName: string) => {
     switch (fieldName) {
@@ -361,6 +467,30 @@ const SecurityScreen = () => {
             <View style={styles.emptyLogsContainer}>
               <Ionicons name="document-text-outline" size={48} color="#ccc" />
               <Text style={styles.emptyLogsText}>Nenhum registro de alteração encontrado</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Dispositivos e Locais de Acesso</Text>
+          
+          {ipsLoading ? (
+            <View style={styles.logsLoadingContainer}>
+              <ActivityIndicator size="small" color="#4285F4" />
+              <Text style={styles.logsLoadingText}>Carregando dispositivos...</Text>
+            </View>
+          ) : loginIps.length > 0 ? (
+            <FlatList
+              data={loginIps}
+              renderItem={renderLoginIpItem}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              style={styles.ipsList}
+            />
+          ) : (
+            <View style={styles.emptyLogsContainer}>
+              <Ionicons name="location-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyLogsText}>Nenhum local de acesso registrado</Text>
             </View>
           )}
         </View>
@@ -733,6 +863,84 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  ipsList: {
+    marginTop: 8,
+  },
+  ipItem: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  ipMainInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  ipAddress: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  trustBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  trustedBadge: {
+    backgroundColor: '#E8F5E9',
+  },
+  untrustedBadge: {
+    backgroundColor: '#FFEBEE',
+  },
+  trustBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  ipDevice: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+  },
+  ipTimeInfo: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  ipTimeLabel: {
+    fontSize: 12,
+    color: '#888',
+    width: 100,
+  },
+  ipTimeValue: {
+    fontSize: 12,
+    color: '#666',
+    flex: 1,
+  },
+  ipTrustButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 4,
+    marginTop: 8,
+  },
+  trust: {
+    backgroundColor: '#4CAF50',
+  },
+  untrust: {
+    backgroundColor: '#F44336',
+  },
+  ipTrustButtonIcon: {
+    marginRight: 6,
+  },
+  ipTrustButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 

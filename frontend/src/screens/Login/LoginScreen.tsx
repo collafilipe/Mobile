@@ -23,6 +23,7 @@ const LoginScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [appState, setAppState] = useState<'active' | 'background' | 'inactive' | 'unknown' | 'extension'>(AppState.currentState);
+  const [error, setError] = useState('');
 
   const {
     login,
@@ -123,37 +124,28 @@ const LoginScreen = () => {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert('Atenção', 'Preencha todos os campos!');
+      Alert.alert('Erro', 'Por favor, preencha todos os campos');
       return;
     }
 
-    // Validação de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(username)) {
-      Alert.alert('Atenção', 'Por favor, insira um email válido!');
-      return;
-    }
-
+    setIsLoading(true);
+    setError('');
+    
     try {
-      const response = await axios.post(`${API_URL}/api/users/login`, {
-        email: username,
-        senha: password,
-      });
-
-      if (response.data.success) {
-        await login(username, password);
-        // Salva o email no histórico
-        const savedEmails = await AsyncStorage.getItem('@saved_emails');
-        let emails = savedEmails ? JSON.parse(savedEmails) : [];
-        if (!emails.includes(username)) {
-          emails.push(username);
-          await AsyncStorage.setItem('@saved_emails', JSON.stringify(emails));
-        }
-      } else {
-        Alert.alert('Atenção', response.data.error || 'Erro ao fazer login');
+      // Simplified login call - no need to check the result type extensively
+      const success = await login(username, password);
+      
+      if (!success) {
+        setError('Falha ao fazer login. Verifique suas credenciais.');
+        Alert.alert('Erro', 'Credenciais inválidas ou problema de conexão.');
       }
-    } catch (error: any) {
-      Alert.alert('Atenção', error.response?.data?.error || 'Erro ao fazer login');
+      // If successful, the AuthContext will handle the navigation
+    } catch (err) {
+      setError('Ocorreu um erro ao tentar fazer login.');
+      console.error(err);
+      Alert.alert('Erro', 'Ocorreu um erro ao tentar fazer login.');
+    } finally {
+      setIsLoading(false);
     }
   };
 

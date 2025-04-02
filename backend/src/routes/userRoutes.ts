@@ -31,17 +31,28 @@ router.post('/login', async (req: Request, res: Response) => {
     const { email, senha } = req.body;
 
     if (!email || !senha) {
-        return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+        return res.status(400).json({ 
+            success: false,
+            error: 'Todos os campos são obrigatórios' 
+        });
     }
+
+    // Capture IP address and user agent
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] as string || '0.0.0.0';
+    const userAgent = req.headers['user-agent'];
 
     // Validação de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: 'Email inválido' });
+        return res.status(400).json({ 
+            success: false,
+            error: 'Email inválido' 
+        });
     }
 
-    const result = await login(email, senha);
-    res.json(result);
+    // Call login function with a single request
+    const result = await login(email, senha, ipAddress, userAgent);
+    return res.json(result);
 });
 
 router.get('/validar/:token', async (req: Request, res: Response) => {
@@ -189,19 +200,41 @@ router.put('/:userId/pin', async (req: Request, res: Response) => {
 });
 
 router.post('/pin-login', async (req: Request, res: Response) => {
-    const { email } = req.body;
+    const { email, userInitiated } = req.body;
 
     if (!email) {
         return res.status(400).json({ error: 'Email é obrigatório' });
     }
-
+    
+    // Capture IP address and user agent
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] as string || '0.0.0.0';
+    const userAgent = req.headers['user-agent'];
+    
     // Validação de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({ error: 'Email inválido' });
     }
 
-    const result = await pinLogin(email);
+    // Only forward userInitiated flag when it's true (actual login)
+    const result = await pinLogin(email, ipAddress, userAgent);
+    res.json(result);
+});
+
+// Add a separate route for PIN verification without login notification
+router.post('/verify-pin', async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email é obrigatório' });
+    }
+    
+    // This is not a login attempt, so don't send notifications
+    const isLoginAttempt = false;
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] as string || '0.0.0.0';
+    const userAgent = req.headers['user-agent'];
+
+    const result = await pinLogin(email, ipAddress, userAgent);
     res.json(result);
 });
 

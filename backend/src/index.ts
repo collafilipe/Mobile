@@ -6,6 +6,7 @@ import { initializeDatabase } from "./data-source";
 import { userRoutes } from "./routes/userRoutes";
 import { passwordRoutes } from "./routes/passwordRoutes";
 import { passwordLogRoutes } from "./routes/passwordLogRoutes";
+import { loginIpRoutes } from "./routes/loginIpRoutes";
 
 // Carrega as variáveis de ambiente
 config();
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use("/api/passwords", passwordRoutes);
 app.use("/api/users", userRoutes);
 app.use('/api/password-logs', passwordLogRoutes);
+app.use('/api/login-ips', loginIpRoutes);
 
 // Rota de teste para verificar se o servidor está funcionando
 app.get("/", (req, res) => {

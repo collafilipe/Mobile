@@ -89,24 +89,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkBiometricSupport();
   }, []);
 
+  const fetchUserData = async (usuarioID: string) => {
+    try {
+      const userResponse = await axios.get(`${API_URL}/api/users/${usuarioID}`);
+      if (userResponse.data.success) {
+        const userData = userResponse.data.user;
+        await AsyncStorage.setItem('@auth_user', JSON.stringify(userData));
+        setUser(userData);
+        return userData;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados do usuário:', error);
+    }
+    return null;
+  };
+
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      setIsLoading(true);
+      
+      // Make a single call to the login API
+      console.log('Attempting login for:', email);
       const response = await axios.post(`${API_URL}/api/users/login`, {
         email,
-        senha: password,
+        senha: password
       });
 
+      console.log('Login response received:', response.data.success);
+      
       if (response.data.success) {
-        const token = response.data.token;
-        await AsyncStorage.setItem('@auth_token', token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        const userData = await fetchUserData(response.data.usuarioID);
         
-        // Busca os dados do usuário
-        const userResponse = await axios.get(`${API_URL}/api/users/${response.data.usuarioID}`);
-        if (userResponse.data.success) {
-          const userData = userResponse.data.user;
-          await AsyncStorage.setItem('@auth_user', JSON.stringify(userData));
-          setUser(userData);
+        if (userData) {
+          const token = response.data.token;
+          await AsyncStorage.setItem('@auth_token', token);
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
           // Salva o email como último acessado
           await AsyncStorage.setItem('@last_email', email);
@@ -122,10 +139,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return true;
         }
       }
+      
+      // If we get here, login failed
       return false;
     } catch (error) {
       console.error('Erro no login:', error);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
